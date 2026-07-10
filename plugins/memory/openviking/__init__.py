@@ -1877,6 +1877,15 @@ class OpenVikingMemoryProvider(MemoryProvider):
                 "env_var": "OPENVIKING_AGENT",
             },
             {
+                "key": "user_isolation",
+                "description": (
+                    "When true, isolate memories per end-user "
+                    "(peer_id = agent>>user). "
+                    "When false (default), one peer per Hermes profile."
+                ),
+                "default": False,
+            },
+            {
                 "key": "recall_limit",
                 "description": "Maximum memories injected by automatic recall",
                 "default": _DEFAULT_RECALL_LIMIT,
@@ -2149,6 +2158,17 @@ class OpenVikingMemoryProvider(MemoryProvider):
             if kwargs.get("platform") == "cli"
             else None
         )
+
+        # End-user isolation: when enabled, derive peer_id = agent>>user
+        # so different end-users of the same Hermes profile get separate
+        # OpenViking peers.  agent_identity and user_id are passed in by
+        # Hermes core via the MemoryProvider interface.
+        user_isolation = settings.get("user_isolation", False)
+        if user_isolation:
+            agent_identity = kwargs.get("agent_identity", self._agent)
+            user_id = kwargs.get("user_id", "")
+            if user_id:
+                self._agent = f"{agent_identity}>>{user_id}"
 
         try:
             self._client = _VikingClient(
